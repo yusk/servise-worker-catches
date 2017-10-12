@@ -10,9 +10,11 @@ const CharacterList = ({ store }) => {
     axios.get('/api/characters')
     .then(response => {  // データ受け取りに成功した場合
       const _characterArray = response.data
+      console.log(_characterArray)
       store.dispatch(receiveDataSuccess(_characterArray))    // データをstoreに保存するとともにisFetchingをfalseに
     })
     .catch(err => {  // データ受け取りに失敗した場合
+      console.log("err")
       console.error(new Error(err))
       store.dispatch(receiveDataFailed())  // isFetchingをfalseに
     })

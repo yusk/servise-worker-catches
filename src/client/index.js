@@ -15,6 +15,12 @@ const render = () => {
 
 store.subscribe(() => {
   render()
-  console.log(store.getState().form)   // 動作確認のためコンソール出力
+  // console.log(store.getState().form)   // 動作確認のためコンソール出力
 })
 render()
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+  	.then(console.log("Registered serviceWorker."))
+    .catch(console.error.bind(console))
+}

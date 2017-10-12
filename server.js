@@ -1,3 +1,4 @@
+import path from 'path'
 import express from 'express'
 import React from 'react'
 import ReactDOMServer from 'react-dom/server'
@@ -18,6 +19,8 @@ mongoose.connect(dbUrl, dbErr => {
   else console.log('db connected')
 
   app.use(express.static('build/client'));
+  app.use(express.static('statics'));
+  app.use(express.static('src/client/sw'));
 
   app.get('/', (req, res) => {
     res.send(
@@ -31,19 +34,81 @@ mongoose.connect(dbUrl, dbErr => {
     )
   })
 
+  app.get('/csr/0', (req, res) => {
+    res.sendFile(path.resolve(__dirname, './src/client/html/index0.html'))
+  })
+
+  app.get('/csr/1', (req, res) => {
+    res.sendFile(path.resolve(__dirname, './src/client/html/index1.html'))
+  })
+
+  app.get('/csr/2', (req, res) => {
+    res.sendFile(path.resolve(__dirname, './src/client/html/index2.html'))
+  })
+
+  app.get('/ssr/0', (req, res) => {
+    res.send(
+      ReactDOMServer.renderToString(
+        <div>
+          <h1>ssr0</h1>
+          <div id="root">
+          </div>
+          <img src="/img/sheep.png" />
+          <script src="/main.js" />
+        </div>
+      )
+    )
+  })
+
+  app.get('/ssr/1', (req, res) => {
+    res.send(
+      ReactDOMServer.renderToString(
+        <div>
+          <h1>ssr1</h1>
+          <div id="root">
+          </div>
+          <img src="/img/elephant.png" />
+          <script src="/main.js" />
+        </div>
+      )
+    )
+  })
+
+  app.get('/ssr/2', (req, res) => {
+    res.send(
+      ReactDOMServer.renderToString(
+        <div>
+          <h1>ssr2</h1>
+          <div id="root">
+          </div>
+          <img src="/img/lion.png" />
+          <script src="/main.js" />
+        </div>
+      )
+    )
+  })
+
   // POSTリクエストに対処
   app.post('/api/characters', (request, response) => {
+    console.log(request.body)
     const { name, age } = request.body  // 送られてきた名前と年齢を取得
 
     new Character({
       name,
       age,
     }).save(err => {
-      if (err) response.status(500)
-      else {
+      if (err) {
+        console.log(err)
+        response.status(500).send()
+      } else {
         Character.find({}, (findErr, characterArray) => {
-          if (findErr) response.status(500).send()
-          else response.status(200).send(characterArray)
+          if (findErr) {
+            console.log(findErr)
+            response.status(500).send()
+          } else {
+            console.log(characterArray)
+            response.status(200).send(characterArray)
+          }
         })
       }
     })
@@ -51,8 +116,13 @@ mongoose.connect(dbUrl, dbErr => {
 
   app.get('/api/characters', (request, response) => {
     Character.find({}, (err, characterArray) => {  // 取得したドキュメントをクライアント側と同じくcharacterArrayと命名
-      if (err) response.status(500).send()
-      else response.status(200).send(characterArray)  // characterArrayをレスポンスとして送り返す
+      if (err) {
+        console.log(err)
+        response.status(500).send()
+      } else {
+        console.log(characterArray)
+        response.status(200).send(characterArray)  // characterArrayをレスポンスとして送り返す
+      }
     })
   })
 
