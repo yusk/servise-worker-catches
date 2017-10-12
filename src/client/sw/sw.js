@@ -12,6 +12,7 @@ workbox.precache([
   '/ssr/1',
   '/img/elephant.png',
 ])
+const eventQueue = []
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting())
@@ -24,8 +25,26 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  console.log('fetch:', event.request.method, event.request.url)
+  const isOnline = navigator.onLine
   const reqUrl = new URL(event.request.url)
+
+  console.log('fetch:', event.request.method, event.request.url)
+  console.log('isOnline:', isOnline)
+  console.log('eventQueue:', eventQueue)
+
+  // イベントキューの消化
+  if (isOnline) {
+    eventQueue.forEach(queueRequest => {
+      fetch(queueRequest.clone())
+        .then(queueResponse => {
+          eventQueue.shift()
+        })
+        .catch(err => {
+          console.log(err)
+        })
+    })
+  }
+
   const pageTargetUrls = [
     '/csr/2',
     '/ssr/2'
@@ -39,8 +58,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(fetch(fetchRequest).catch(() => {
       return caches.match(offlinePageURL)
     }))
-  } 
-  else if (reqUrl.pathname === '/api/characters') {
+  } else if (reqUrl.pathname === '/api/characters') {
     const fetchRequest = event.request.clone()
     if (fetchRequest.method === 'GET' || fetchRequest.method === 'PUT'){
       event.respondWith(fetch(fetchRequest)
@@ -48,14 +66,20 @@ self.addEventListener('fetch', (event) => {
           const responseForCache = fetchResponse.clone()
           caches.open(CACHE_NAME)
             .then((cache) => {
-              console.log("responseForCache")
-              console.log(responseForCache)
-              console.log(event.request)
               cache.put(event.request.url, responseForCache);
             });
           return fetchResponse
         })
         .catch(() => {
+          // イベントキューに失敗したPUTリクエストを追加
+          if (isOnline == false){
+            const queueRequest = event.request.clone()
+            if (queueRequest.method === 'PUT') {
+              eventQueue.push(queueRequest)
+              console.log("eventQueue", eventQueue)
+            }
+          }
+          // キャッシュからデータを取得
           return caches.match(event.request)
             .then(cacheResponse => {
               return cacheResponse
