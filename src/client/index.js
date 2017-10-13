@@ -4,7 +4,7 @@ import { createStore } from 'redux'
 import App from './components/App'
 import rootReducer from './reducers'
 
-const store = createStore(rootReducer)
+const store = createStore(rootReducer) // 2つ目が initialState
 
 const render = () => {
   ReactDOM.render(
