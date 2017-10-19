@@ -34,6 +34,11 @@ function urlsafeBase64ToBinary(urlsafeBase64) {
     return binary;
 }
 
+// ArrayBuffer から Base64 エンコードに変換する
+function arrayBufferToBase64(arrayBuffer) {
+    return window.btoa(String.fromCharCode.apply(null, new Uint8Array(arrayBuffer))).replace(/\+/g, '-').replace(/\//g, '_');
+}
+
 Notification.requestPermission().then((permission) => {
   switch (permission) {
     case 'granted':
