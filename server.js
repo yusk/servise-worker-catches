@@ -1,5 +1,6 @@
 import path from 'path'
 import express from 'express'
+import webpush from 'web-push'
 import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import bodyParser from 'body-parser'
@@ -9,6 +10,12 @@ import Character from './character' // モデルをimport
 const app = express()
 const port = 3000
 const dbUrl = 'mongodb://localhost/crud' // dbの名前をcrudに指定
+
+const contact   = 'mailto:tdfagamdb186@yahoo.com';
+const vapidKeys = webpush.generateVAPIDKeys();
+
+// アプリケーションの連絡先と, サーバーサイドの鍵ペアの情報を登録
+webpush.setVapidDetails(contact, vapidKeys.publicKey, vapidKeys.privateKey);
 
 // body-parserを適用
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -23,15 +30,7 @@ mongoose.connect(dbUrl, dbErr => {
   app.use(express.static('src/client/sw'));
 
   app.get('/', (req, res) => {
-    res.send(
-      ReactDOMServer.renderToString(
-        <div>
-          <div id="root">
-          </div>
-          <script src="main.js" />
-        </div>
-      )
-    )
+    res.sendFile(path.resolve(__dirname, './src/client/html/webpush.html'))
   })
 
   app.get('/csr/0', (req, res) => {
@@ -151,6 +150,46 @@ mongoose.connect(dbUrl, dbErr => {
       }
     })
   })
+
+  app.get('/api/webpush/get', (req, res) => {
+    return res.json({
+      publicKey : vapidKeys.publicKey
+    });
+  });
+
+  // 購読のための POST 先
+  app.post('/api/webpush/subscribe', (req, res) => {
+    // プッシュ通知の送信先情報 (実際には, DB などから取得)
+    const subscription = {
+        endpoint : req.body['hidden-endpoint'],
+        keys     : {
+            auth   : req.body['hidden-auth'],
+            p256dh : req.body['hidden-p256dh']
+        }
+    };
+
+    // プッシュ通知で送信したい任意のデータ
+    const payload = JSON.stringify({
+        title : req.body['text-title'],
+        body  : req.body['text-body'],
+        icon  : req.body['url-icon'],
+        url   : req.body['url-link']
+    });
+
+    // 購読時に, クライアントサイドから取得したエンドポイント URI に対して POST リクエストを送信
+    webpush.sendNotification(subscription, payload).then((response) => {
+        return res.json({
+            statusCode : response.statusCode || -1,
+            message    : response.message    || ''
+        });
+    }).catch((error) => {
+        console.dir(error);
+        return res.json({
+            statusCode : error.statusCode || -1,
+            message    : error.message    || '',
+        });
+    });
+  });
 
   // MongoDBに接続してからサーバーを立てるために
   // app.listen()をmongoose.connect()の中に移動
