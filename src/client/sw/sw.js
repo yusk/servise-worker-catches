@@ -4,13 +4,13 @@ const CACHE_NAME = 'cache-v001';
 const workbox = new self.WorkboxSW();
 self.workbox.logLevel = self.workbox.LOG_LEVEL.verbose;
 workbox.precache([
-  '/csr/1',
-  '/img/frog.png',
+  // '/csr/1',
+  // '/img/frog.png',
   // '/main.js',
-  '/offline.html',
-  '/img/pig.png',
-  '/ssr/1',
-  '/img/elephant.png',
+  // '/offline.html',
+  // '/img/pig.png',
+  // '/ssr/1',
+  // '/img/elephant.png',
 ])
 const eventQueue = []
 
@@ -87,4 +87,29 @@ self.addEventListener('fetch', (event) => {
         }))
     }
   }
+});
+
+self.addEventListener('push', (event) => {
+    // デスクトップ通知の表示処理
+    if (!event.data) {
+      return;
+    }
+
+    const data  = event.data.json();  // ペイロードを JSON 形式でパース
+    const title = data.title;
+    const body  = data.body;
+    const icon  = data.icon;
+    const url   = data.url;
+
+    event.waitUntil(
+        self.registration.showNotification(title, { body, icon, data : { url } })
+    );
+});
+
+self.addEventListener('notificationclick', (event) => {
+    const notification = event.notification;  // Notification インスタンスを取得
+    const url          = notification.data.url;
+
+    // 通知をクリックしたら, URL で指定されたページを新しいタブで開く
+    event.waitUntil(self.clients.openWindow(url));
 });
