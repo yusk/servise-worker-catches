@@ -6,7 +6,7 @@ self.workbox.logLevel = self.workbox.LOG_LEVEL.verbose;
 workbox.precache([
   '/csr/1',
   '/img/frog.png',
-  '/main.js',
+  // '/main.js',
   '/offline.html',
   '/img/pig.png',
   '/ssr/1',
