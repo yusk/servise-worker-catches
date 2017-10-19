@@ -161,33 +161,34 @@ mongoose.connect(dbUrl, dbErr => {
   app.post('/api/webpush/subscribe', (req, res) => {
     // プッシュ通知の送信先情報 (実際には, DB などから取得)
     const subscription = {
-        endpoint : req.body['hidden-endpoint'],
-        keys     : {
-            auth   : req.body['hidden-auth'],
-            p256dh : req.body['hidden-p256dh']
-        }
+      endpoint : req.body['hidden-endpoint'],
+      keys     : {
+          auth   : req.body['hidden-auth'],
+          p256dh : req.body['hidden-p256dh']
+      }
     };
 
     // プッシュ通知で送信したい任意のデータ
     const payload = JSON.stringify({
-        title : req.body['text-title'],
-        body  : req.body['text-body'],
-        icon  : req.body['url-icon'],
-        url   : req.body['url-link']
+      title : req.body['text-title'],
+      body  : req.body['text-body'],
+      icon  : req.body['url-icon'],
+      url   : req.body['url-link']
     });
 
     // 購読時に, クライアントサイドから取得したエンドポイント URI に対して POST リクエストを送信
     webpush.sendNotification(subscription, payload).then((response) => {
-        return res.json({
-            statusCode : response.statusCode || -1,
-            message    : response.message    || ''
-        });
+      console.log({
+        statusCode : response.statusCode || -1,
+        message    : response.message    || ''
+      });
+      return res.redirect('/')
     }).catch((error) => {
-        console.dir(error);
-        return res.json({
-            statusCode : error.statusCode || -1,
-            message    : error.message    || '',
-        });
+      console.dir(error);
+      return res.json({
+        statusCode : error.statusCode || -1,
+        message    : error.message    || '',
+      });
     });
   });
 
