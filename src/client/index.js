@@ -19,6 +19,18 @@ store.subscribe(() => {
 })
 render()
 
+function testNotificate(){
+  const title    = 'Notification';
+  const options  = {
+    body : '通知が許可されています。',
+    icon : 'https://lh3.googleusercontent.com/75nNjZWwVcuQGTAC9BRbGnL5F2OO5aLG4TE66-Zs8JSn5ZkrVGwxH2hdXyEZ2AZv5dA=w300',
+    data : {
+      foo : 'bar'
+     }
+  };
+  const notification = new Notification(title, options);
+}
+
 // Base64 エンコードからバイナリ形式に変換する
 function urlsafeBase64ToBinary(urlsafeBase64) {
     const base64 = urlsafeBase64.replace(/-/g, '+')
@@ -43,6 +55,7 @@ Notification.requestPermission().then((permission) => {
   switch (permission) {
     case 'granted':
       console.log("granted")
+      // testNotificate()
       break;
     case 'denied':
       console.log("denied")
@@ -90,16 +103,3 @@ if ('serviceWorker' in navigator) {
     console.error('Subscribing web push failed.');
   });
 }
-
-/*
-const title    = 'タイトル';
-const options  = {
-    body : '本文',
-    icon : '/img/frog.png',
-    data : {
-      foo : 'bar'
-     }
-};
-
-const notification = new Notification(title, options);
-*/

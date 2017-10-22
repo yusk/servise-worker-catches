@@ -6,16 +6,15 @@ import ReactDOMServer from 'react-dom/server'
 import bodyParser from 'body-parser'
 import mongoose from 'mongoose'
 import Character from './character' // モデルをimport
+import Vapidkey from './vapidkey'
+import Subscription from './subscription'
 
 const app = express()
 const port = 3000
 const dbUrl = 'mongodb://localhost/crud' // dbの名前をcrudに指定
 
 const contact   = 'mailto:tdfagamdb186@yahoo.com';
-const vapidKeys = webpush.generateVAPIDKeys();
-
-// アプリケーションの連絡先と, サーバーサイドの鍵ペアの情報を登録
-webpush.setVapidDetails(contact, vapidKeys.publicKey, vapidKeys.privateKey);
+const pushKind = 'normal'
 
 // body-parserを適用
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -28,6 +27,25 @@ mongoose.connect(dbUrl, dbErr => {
   app.use(express.static('build/client'));
   app.use(express.static('statics'));
   app.use(express.static('src/client/sw'));
+
+  Vapidkey.findOne({kind: pushKind}, (err, vapidkey) => {
+    if (vapidkey) {
+      webpush.setVapidDetails(contact, vapidkey.publicKey, vapidkey.privateKey); // アプリケーションの連絡先と, サーバーサイドの鍵ペアの情報を登録
+      console.log('setVapidDetails')
+      console.log(vapidkey)
+    } else {
+      const vapidKeys = webpush.generateVAPIDKeys();
+      webpush.setVapidDetails(contact, vapidKeys.publicKey, vapidKeys.privateKey); // アプリケーションの連絡先と, サーバーサイドの鍵ペアの情報を登録
+      new Vapidkey({
+        publicKey: vapidKeys.publicKey,
+        privateKey: vapidKeys.privateKey,
+        kind: pushKind,
+      }).save(err => {
+        if (err) console.log(err)
+        console.log('setVapidDetails')
+      })
+    }
+  })
 
   app.get('/', (req, res) => {
     res.sendFile(path.resolve(__dirname, './src/client/html/webpush.html'))
@@ -152,14 +170,31 @@ mongoose.connect(dbUrl, dbErr => {
   })
 
   app.get('/api/webpush/get', (req, res) => {
-    return res.json({
-      publicKey : vapidKeys.publicKey
-    });
+    Vapidkey.findOne({kind: pushKind}, (err, vapidkey) => {
+      if (err) response.status(500).send()
+      return res.json({
+        publicKey : vapidkey.publicKey
+      });
+    })
   });
 
   // 購読のための POST 先
   app.post('/api/webpush/subscribe', (req, res) => {
     // プッシュ通知の送信先情報 (実際には, DB などから取得)
+    Subscription.findOne({endpoint: req.body['hidden-endpoint']}, (err, subscription) => {
+      if (!subscription) {
+        new Subscription({
+          endpoint: req.body['hidden-endpoint'],
+          auth: req.body['hidden-auth'],
+          p256dh: req.body['hidden-p256dh']
+        }).save(err => {
+          if (err) console.log(err)
+          console.log('subscription registered')
+        })
+      } else {
+        console.log('already registered')
+      }
+    })
     const subscription = {
       endpoint : req.body['hidden-endpoint'],
       keys     : {
@@ -191,6 +226,34 @@ mongoose.connect(dbUrl, dbErr => {
       });
     });
   });
+
+  app.post('/api/webpush', (req, res) => {
+    const payload = JSON.stringify({
+      title : req.body['title'] || '通知',
+      body  : req.body['body'] || '',
+      icon  : req.body['icon'],
+      url   : req.body['link']
+    });
+    Subscription.find({}, (err, subscriptions) => {
+      subscriptions.forEach(subscription => {
+        const subscriptionParams = {
+          endpoint: subscription.endpoint,
+          keys    : {
+            auth   : subscription.auth,
+            p256dh : subscription.p256dh
+          }
+        }
+        webpush.sendNotification(subscriptionParams, payload).then((response) => {
+          console.log('send succeeded')
+        }).catch((error) => {
+          console.log('send failed')
+        })
+      })
+    })
+    return res.status(200).send()
+  });
+
+
 
   // MongoDBに接続してからサーバーを立てるために
   // app.listen()をmongoose.connect()の中に移動
